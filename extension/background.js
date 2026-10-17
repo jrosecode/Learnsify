@@ -28,7 +28,7 @@ chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{(async()=>{
     captureQueue=captureQueue.then(async()=>{
       const latest=await state();if(!latest.active||latest.captures.length>=MAX_CAPTURES)return latest.captures.length;
       let screenshot=null;try{screenshot=await captureScreen(sender.tab?.windowId)}catch(error){console.warn('Learnsify screenshot unavailable',error)}
-      const capture={...message.capture,screenshot,tabId:sender.tab?.id,sequence:latest.sequence+1,capturedAt:Date.now()};
+      const capture={...message.capture,pageTitle:sender.tab?.title||message.capture.pageTitle,url:sender.tab?.url||message.capture.url,screenshot,tabId:sender.tab?.id,sequence:latest.sequence+1,capturedAt:Date.now()};
       const captures=[...latest.captures,capture];await chrome.storage.local.set({captures,sequence:capture.sequence});await setBadge(true,captures.length);return captures.length;
     });
     const count=await captureQueue;sendResponse({ok:true,active:true,count});return
