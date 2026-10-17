@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Learnsify Capture",
-  "version": "1.0.0",
-  "description": "Capture browser clicks in order and turn them into Learnsify guide steps.",
-  "permissions": ["storage", "tabs"],
+  "version": "1.1.0",
+  "description": "Capture browser clicks and screenshots in order and turn them into Learnsify guide steps.",
+  "permissions": ["storage", "unlimitedStorage", "tabs"],
   "host_permissions": ["<all_urls>"],
   "background": {"service_worker": "background.js", "type": "module"},
   "action": {"default_popup": "popup.html", "default_title": "Learnsify Capture"},

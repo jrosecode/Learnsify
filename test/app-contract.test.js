@@ -7,4 +7,13 @@ test('editor exposes browser capture start and stop integration', async () => {
   assert.match(source,/LEARNSIFY_START_CAPTURE/);
   assert.match(source,/LEARNSIFY_STOP_CAPTURE/);
   assert.match(source,/LEARNSIFY_CAPTURE_RESULT/);
+  assert.match(source,/step-screenshot/);
+  assert.match(source,/s\.screenshot/);
+});
+
+test('extension captures and compresses the visible tab for each click', async () => {
+  const background=await readFile(new URL('../extension/background.js',import.meta.url),'utf8');
+  assert.match(background,/captureVisibleTab/);
+  assert.match(background,/OffscreenCanvas/);
+  assert.match(background,/screenshot/);
 });

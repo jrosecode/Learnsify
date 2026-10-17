@@ -5,5 +5,5 @@ export function describeElement({ariaLabel='',text='',placeholder='',name='',tag
   const type=names[String(tag).toLowerCase()]||String(tag).toLowerCase()||'element';
   return `“${label}” ${type}`;
 }
-export function captureToStep(capture){return {id:`capture-${capture.sequence}`,title:`Click ${capture.description}`,description:`On ${capture.pageTitle||'this page'}, click ${capture.description}.`,url:capture.url,pageTitle:capture.pageTitle,sequence:capture.sequence,capturedAt:capture.capturedAt};}
+export function captureToStep(capture){return {id:`capture-${capture.sequence}`,title:`Click ${capture.description}`,description:`On ${capture.pageTitle||'this page'}, click ${capture.description}.`,url:capture.url,pageTitle:capture.pageTitle,screenshot:capture.screenshot||null,click:{x:capture.x,y:capture.y},sequence:capture.sequence,capturedAt:capture.capturedAt};}
 export function orderCaptures(rows){return [...rows].sort((a,b)=>a.sequence-b.sequence);}

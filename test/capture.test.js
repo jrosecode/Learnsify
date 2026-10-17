@@ -12,10 +12,11 @@ test('describeElement falls back to useful text and element type', () => {
 });
 
 test('captureToStep includes action, page, and URL', () => {
-  const step=captureToStep({sequence:2,description:'“Submit” button',pageTitle:'Checkout',url:'https://example.com/pay'});
+  const step=captureToStep({sequence:2,description:'“Submit” button',pageTitle:'Checkout',url:'https://example.com/pay',screenshot:'data:image/jpeg;base64,abc'});
   assert.equal(step.title,'Click “Submit” button');
   assert.match(step.description,/Checkout/);
   assert.equal(step.url,'https://example.com/pay');
+  assert.equal(step.screenshot,'data:image/jpeg;base64,abc');
 });
 
 test('orderCaptures preserves click sequence across tabs', () => {

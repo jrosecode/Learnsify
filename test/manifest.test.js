@@ -8,4 +8,5 @@ test('extension manifest is MV3 and captures all normal web tabs', async () => {
   assert.ok(manifest.host_permissions.includes('<all_urls>'));
   assert.ok(manifest.content_scripts[0].matches.includes('<all_urls>'));
   assert.ok(manifest.permissions.includes('storage'));
+  assert.ok(manifest.permissions.includes('unlimitedStorage'));
 });

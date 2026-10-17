@@ -23,4 +23,4 @@ Learnsify includes a Chrome/Edge Manifest V3 extension in `extension/`.
 5. Open a guide and choose **Capture browser**.
 6. Click through normal web pages in any tabs, then return to Learnsify and choose **Stop capture**.
 
-Each click is saved in order with the page title, URL, element type, accessible label/text, and click coordinates. Browser-internal pages such as `chrome://` cannot be captured because Chrome blocks extensions on those pages.
+Each click is saved in order with a compressed screenshot, page title, URL, element type, accessible label/text, click coordinates, and an on-screen highlight around the clicked element. Captures are capped at 50 steps per session to keep browser storage responsive. Browser-internal pages such as `chrome://` cannot be captured because Chrome blocks extensions on those pages.

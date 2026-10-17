@@ -11,7 +11,8 @@ document.addEventListener('click',event=>{
   const target=event.target?.closest?.('a,button,input,select,textarea,[role="button"],[role="link"],[tabindex]')||event.target;
   if(!target||target.closest?.('[data-learnsify-control]'))return;
   const rect=target.getBoundingClientRect?.()||{};
-  chrome.runtime.sendMessage({type:'CAPTURE_CLICK',capture:{description:describe(target),pageTitle:document.title,url:location.href,tag:target.tagName?.toLowerCase(),x:Math.round((rect.left||0)+(rect.width||0)/2),y:Math.round((rect.top||0)+(rect.height||0)/2)}}).catch(()=>{});
+  const marker=document.createElement('div');marker.dataset.learnsifyControl='marker';Object.assign(marker.style,{position:'fixed',zIndex:'2147483647',pointerEvents:'none',left:`${rect.left-4}px`,top:`${rect.top-4}px`,width:`${rect.width+8}px`,height:`${rect.height+8}px`,border:'4px solid #ff654d',borderRadius:'10px',boxShadow:'0 0 0 4px #fff8'});document.documentElement.append(marker);
+  chrome.runtime.sendMessage({type:'CAPTURE_CLICK',capture:{description:describe(target),pageTitle:document.title,url:location.href,tag:target.tagName?.toLowerCase(),x:Math.round((rect.left||0)+(rect.width||0)/2),y:Math.round((rect.top||0)+(rect.height||0)/2)}}).finally(()=>marker.remove()).catch(()=>{});
 },true);
 if(location.hostname==='learnsify.netlify.app'||location.hostname==='localhost'||location.hostname==='127.0.0.1'){
   window.addEventListener('message',event=>{
