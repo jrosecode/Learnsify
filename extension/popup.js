@@ -1,0 +1,3 @@
+const status=document.querySelector('#status'),toggle=document.querySelector('#toggle');let active=false;
+async function refresh(){const s=await chrome.runtime.sendMessage({type:'GET_STATUS'});active=s.active;status.textContent=active?`Recording · ${s.count} click${s.count===1?'':'s'} captured`:'Ready to capture clicks across tabs';toggle.textContent=active?'Stop capture':'Start capture';toggle.classList.toggle('active',active)}
+toggle.onclick=async()=>{const result=await chrome.runtime.sendMessage({type:active?'STOP_CAPTURE':'START_CAPTURE'});if(result.steps?.length){await chrome.storage.local.set({lastCompletedSteps:result.steps});await chrome.tabs.create({url:'https://learnsify.netlify.app'})}await refresh()};refresh();

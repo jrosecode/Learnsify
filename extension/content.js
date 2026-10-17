@@ -1,0 +1,25 @@
+const clean=value=>(value||'').replace(/\s+/g,' ').trim().slice(0,120);
+function describe(target){
+  const tag=target.tagName?.toLowerCase()||'element';
+  const type={a:'link',button:'button',input:'field',select:'dropdown',textarea:'field',option:'option'}[tag]||tag;
+  const labelledBy=target.getAttribute?.('aria-labelledby');
+  const labelledText=labelledBy?document.getElementById(labelledBy)?.innerText:'';
+  const label=clean(target.getAttribute?.('aria-label'))||clean(labelledText)||clean(target.innerText)||clean(target.value)||clean(target.placeholder)||clean(target.name)||clean(target.id)||tag;
+  return `“${label}” ${type}`;
+}
+document.addEventListener('click',event=>{
+  const target=event.target?.closest?.('a,button,input,select,textarea,[role="button"],[role="link"],[tabindex]')||event.target;
+  if(!target||target.closest?.('[data-learnsify-control]'))return;
+  const rect=target.getBoundingClientRect?.()||{};
+  chrome.runtime.sendMessage({type:'CAPTURE_CLICK',capture:{description:describe(target),pageTitle:document.title,url:location.href,tag:target.tagName?.toLowerCase(),x:Math.round((rect.left||0)+(rect.width||0)/2),y:Math.round((rect.top||0)+(rect.height||0)/2)}}).catch(()=>{});
+},true);
+if(location.hostname==='learnsify.netlify.app'||location.hostname==='localhost'||location.hostname==='127.0.0.1'){
+  window.addEventListener('message',event=>{
+    if(event.source!==window)return;
+    const map={LEARNSIFY_START_CAPTURE:'START_CAPTURE',LEARNSIFY_STOP_CAPTURE:'STOP_CAPTURE',LEARNSIFY_STATUS_REQUEST:'GET_STATUS'};
+    const type=map[event.data?.type];if(!type)return;
+    chrome.runtime.sendMessage({type}).then(result=>window.postMessage({type:type==='STOP_CAPTURE'?'LEARNSIFY_CAPTURE_RESULT':'LEARNSIFY_CAPTURE_STATUS',...result},'*')).catch(()=>window.postMessage({type:'LEARNSIFY_EXTENSION_MISSING'},'*'));
+  });
+  chrome.runtime.sendMessage({type:'GET_STATUS'}).then(result=>window.postMessage({type:'LEARNSIFY_CAPTURE_STATUS',...result},'*')).catch(()=>{});
+  chrome.runtime.sendMessage({type:'GET_PENDING'}).then(result=>{if(result.steps?.length)window.postMessage({type:'LEARNSIFY_CAPTURE_RESULT',...result},'*')}).catch(()=>{});
+}

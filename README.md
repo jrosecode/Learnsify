@@ -10,4 +10,17 @@ npm run build
 python3 -m http.server 4173 -d dist
 ```
 
-Data persists in the browser with localStorage. This clean-room MVP does not include a browser extension or backend authentication.
+Data persists in the browser with localStorage. The web dashboard has no backend authentication; cross-tab capture is provided by the included browser extension.
+
+## Capture clicks across browser tabs
+
+Learnsify includes a Chrome/Edge Manifest V3 extension in `extension/`.
+
+1. Open `chrome://extensions` (or `edge://extensions`).
+2. Enable **Developer mode**.
+3. Click **Load unpacked** and select this repository's `extension` folder.
+4. Refresh `https://learnsify.netlify.app`.
+5. Open a guide and choose **Capture browser**.
+6. Click through normal web pages in any tabs, then return to Learnsify and choose **Stop capture**.
+
+Each click is saved in order with the page title, URL, element type, accessible label/text, and click coordinates. Browser-internal pages such as `chrome://` cannot be captured because Chrome blocks extensions on those pages.
