@@ -1,11 +1,13 @@
 {
   "manifest_version": 3,
+  "minimum_chrome_version": "116",
   "name": "Learnsify Capture",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Capture browser clicks and screenshots in order and turn them into Learnsify guide steps.",
-  "permissions": ["storage", "unlimitedStorage", "tabs"],
+  "permissions": ["storage", "unlimitedStorage", "tabs", "sidePanel"],
   "host_permissions": ["<all_urls>"],
   "background": {"service_worker": "background.js", "type": "module"},
-  "action": {"default_popup": "popup.html", "default_title": "Learnsify Capture"},
+  "action": {"default_title": "Open Learnsify Capture"},
+  "side_panel": {"default_path": "sidepanel.html"},
   "content_scripts": [{"matches": ["<all_urls>"], "js": ["content.js"], "run_at": "document_start"}]
 }

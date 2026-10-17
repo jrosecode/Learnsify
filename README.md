@@ -20,7 +20,8 @@ Learnsify includes a Chrome/Edge Manifest V3 extension in `extension/`.
 2. Enable **Developer mode**.
 3. Click **Load unpacked** and select this repository's `extension` folder.
 4. Refresh `https://learnsify.netlify.app`.
-5. Open a guide and choose **Capture browser**.
-6. Click through normal web pages in any tabs, then return to Learnsify and choose **Stop capture**.
+5. Click the Learnsify extension icon to open its persistent right-side panel, or open a guide and choose **Capture browser**.
+6. Start capture. The panel remains open as you switch tabs and shows every click, description, and screenshot live.
+7. Choose **Stop and import**, then open Learnsify to add the ordered steps to your guide.
 
 Each click is saved in order with a compressed screenshot, page title, URL, element type, accessible label/text, click coordinates, and an on-screen highlight around the clicked element. Captures are capped at 50 steps per session to keep browser storage responsive. Browser-internal pages such as `chrome://` cannot be captured because Chrome blocks extensions on those pages.

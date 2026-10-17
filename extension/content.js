@@ -8,6 +8,7 @@ function describe(target){
   return `“${label}” ${type}`;
 }
 document.addEventListener('click',event=>{
+  if(location.hostname==='learnsify.netlify.app'||(location.hostname==='127.0.0.1'&&location.port==='4177'))return;
   const target=event.target?.closest?.('a,button,input,select,textarea,[role="button"],[role="link"],[tabindex]')||event.target;
   if(!target||target.closest?.('[data-learnsify-control]'))return;
   const rect=target.getBoundingClientRect?.()||{};

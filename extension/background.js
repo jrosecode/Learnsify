@@ -17,10 +17,11 @@ async function captureScreen(windowId){
   return compressScreenshot(raw);
 }
 chrome.runtime.onInstalled.addListener(()=>chrome.storage.local.set(initial));
+chrome.sidePanel.setPanelBehavior({openPanelOnActionClick:true}).catch(()=>{});
 chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{(async()=>{
   const current=await state();
-  if(message.type==='START_CAPTURE'){await chrome.storage.local.set({...initial,active:true,startedAt:Date.now()});await setBadge(true,0);sendResponse({ok:true,active:true,count:0});return}
-  if(message.type==='STOP_CAPTURE'){await captureQueue;const latest=await state();const ordered=orderCaptures(latest.captures);await chrome.storage.local.set(initial);await setBadge(false);sendResponse({ok:true,active:false,steps:ordered.map(captureToStep),count:ordered.length});return}
+  if(message.type==='START_CAPTURE'){await chrome.storage.local.set({...initial,active:true,startedAt:Date.now(),lastCompletedSteps:[]});if(sender.tab?.windowId)chrome.sidePanel.open({windowId:sender.tab.windowId}).catch(()=>{});await setBadge(true,0);sendResponse({ok:true,active:true,count:0});return}
+  if(message.type==='STOP_CAPTURE'){await captureQueue;const latest=await state();const ordered=orderCaptures(latest.captures);const steps=ordered.map(captureToStep);const appIsWaiting=sender.tab?.url&&/^(https:\/\/learnsify\.netlify\.app|http:\/\/(localhost|127\.0\.0\.1))/.test(sender.tab.url);await chrome.storage.local.set({...initial,lastCompletedSteps:appIsWaiting?[]:steps});await setBadge(false);sendResponse({ok:true,active:false,steps,count:ordered.length});return}
   if(message.type==='GET_STATUS'){sendResponse({ok:true,active:current.active,count:current.captures.length,startedAt:current.startedAt});return}
   if(message.type==='GET_PENDING'){const {lastCompletedSteps=[]}=await chrome.storage.local.get({lastCompletedSteps:[]});if(lastCompletedSteps.length)await chrome.storage.local.remove('lastCompletedSteps');sendResponse({ok:true,steps:lastCompletedSteps});return}
   if(message.type==='CAPTURE_CLICK'&&current.active){
