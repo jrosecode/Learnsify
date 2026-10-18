@@ -5,7 +5,7 @@ const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/ht
 (async()=>{
  await new Promise(r=>server.listen(4188,'127.0.0.1',r));
  const profile=fs.mkdtempSync('/tmp/pathira-browser-');
- const launch=()=>chromium.launchPersistentContext(profile,{headless:true,channel:'chromium',args:[`--disable-extensions-except=${ext}`,`--load-extension=${ext}`]});
+ const launch=()=>chromium.launchPersistentContext(profile,{headless:true,viewport:{width:400,height:850},channel:'chromium',args:[`--disable-extensions-except=${ext}`,`--load-extension=${ext}`]});
  let context=await launch();let worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker');let id=new URL(worker.url()).host;
  let panel=await context.newPage();await panel.goto(`chrome-extension://${id}/sidepanel.html`);
  const send=(type,extra={})=>panel.evaluate(async({type,extra})=>chrome.runtime.sendMessage({type,...extra}),{type,extra});
@@ -20,6 +20,7 @@ const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/ht
  await send('RESUME_CAPTURE');await page.bringToFront();assert.equal((await send('MANUAL_CAPTURE')).ok,true);
  await panel.waitForFunction(async()=>(await chrome.storage.local.get('captures')).captures?.[1]?.imageStatus==='saved');console.log('PASS manual screenshot');
  await panel.screenshot({path:'/tmp/pathira-panel.png',fullPage:true});
+ console.log('PANEL_PREVIEW_BASE64='+fs.readFileSync('/tmp/pathira-panel.png').toString('base64'));
  await context.close();context=await launch();worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker');
  panel=await context.newPage();await panel.goto(`chrome-extension://${id}/sidepanel.html`);
  await send('GET_STATUS');data=await storage();assert.equal(data.paused,true);assert.equal(data.captures.length,2);console.log('PASS browser restart retains session and pauses');
