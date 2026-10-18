@@ -10,9 +10,9 @@ Capture resumes in a paused state after a service-worker restart. Resume or fini
 
 `npm run build`: passes.
 
-Real Chromium validation is pending: browser downloads returned truncated archives in the implementation environment. Do not treat the mocked tests as actual extension or visual verification.
+Real Chromium verification passed in GitHub Actions: event checkpoints, screenshots, pause/resume, manual capture, browser restart recovery, pending import retention, overwrite protection, and batch acknowledgement. The side-panel preview was inspected at 400px width. Local browser downloads were unavailable; the remote tests use real Chromium with the unpacked extension.
 
-Run `node scripts/capture-smoke.cjs` in an environment with Playwright and Chromium installed. It loads the unpacked extension, tests screenshots, pause/resume, browser restart, and acknowledged imports. Also manually verify the side panel in Chrome, rapid clicks, multiple windows, long navigation, and failed cloud saves before production merge.
+Run `node scripts/capture-smoke.cjs` in an environment with Playwright and Chromium installed. It loads the unpacked extension, tests screenshots, pause/resume, browser restart, and acknowledged imports. Additional exploratory coverage should include rapid clicks, multiple windows, long navigation, and failed cloud saves.
 
 Package the extension after verification: `npm run package:store -- --name Pathira --slug pathira`. The existing store ZIP remains the earlier release until this gate passes.
 
