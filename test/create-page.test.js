@@ -11,8 +11,8 @@ test('Create guide opens a dedicated onboarding page',()=>{
   assert.match(create,/<title>Create a guide — Pathira<\/title>/);
   assert.equal((create.match(/class="instruction-step"/g)||[]).length,4);
   assert.match(create,/id="create-guide-form"/);
-  assert.match(createJs,/createWorkflow/);
-  assert.match(createJs,/location\.href=.*#guide/);
+  assert.match(createJs,/URLSearchParams/);
+  assert.match(createJs,/location\.href='index\.html\?'/);
 });
 
 test('Pathira logo replaces the letter badge in the application shell',async()=>{

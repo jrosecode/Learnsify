@@ -1,3 +1,4 @@
+import {safeReturnPath} from './navigation.js';
 import {supabase} from './cloud.js';
 const form=document.querySelector('#auth'),email=document.querySelector('#email'),password=document.querySelector('#password'),message=document.querySelector('#message'),submit=document.querySelector('#submit');
 let mode='login';
@@ -13,5 +14,5 @@ form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;message.
  else result=await supabase.auth.signInWithPassword({email:email.value,password:password.value});
  if(result.error)throw result.error;
  if(mode==='signup'&&!result.data.session){message.textContent='Check your email to confirm your account, then sign in.';return;}
- location.replace('index.html');
+ location.replace(safeReturnPath(new URLSearchParams(location.search).get('next'),location.origin));
  }catch(error){message.textContent=error.message;}finally{submit.disabled=false;}};
