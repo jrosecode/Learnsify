@@ -1,37 +1,65 @@
 import {captureToStep,orderCaptures} from './lib/capture.js';
-const initial={active:false,captures:[],sequence:0,startedAt:null};
+const initial={active:false,paused:false,captures:[],sequence:0,startedAt:null,sessionId:null,error:null};
 const MAX_CAPTURES=50;
-let captureQueue=Promise.resolve();
-async function state(){return {...initial,...await chrome.storage.local.get(initial)}}
+let mutations=Promise.resolve(),images=Promise.resolve();
+const serial=fn=>{const next=mutations.then(fn);mutations=next.catch(()=>{});return next};
+const state=async()=>({...initial,...await chrome.storage.local.get(null)});
 async function setBadge(active,count=0){await chrome.action.setBadgeBackgroundColor({color:active?'#ff654d':'#6e7772'});await chrome.action.setBadgeText({text:active?String(count):''})}
 async function blobToDataURL(blob){const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));return `data:${blob.type};base64,${btoa(binary)}`}
-async function compressScreenshot(dataUrl){
-  const bitmap=await createImageBitmap(await (await fetch(dataUrl)).blob());
-  const width=Math.min(800,bitmap.width),height=Math.round(bitmap.height*(width/bitmap.width));
-  const canvas=new OffscreenCanvas(width,height);canvas.getContext('2d').drawImage(bitmap,0,0,width,height);bitmap.close();
-  return blobToDataURL(await canvas.convertToBlob({type:'image/jpeg',quality:.48}));
+async function captureScreen(tab){
+ await new Promise(r=>setTimeout(r,600));
+ const [current]=await chrome.tabs.query({active:true,windowId:tab.windowId});
+ if(current?.id!==tab.id||current?.url!==tab.url)throw new Error('Page changed before screenshot. Return to the page and retry.');
+ const raw=await chrome.tabs.captureVisibleTab(tab.windowId,{format:'jpeg',quality:65});
+ const bitmap=await createImageBitmap(await (await fetch(raw)).blob());
+ const width=Math.min(1200,bitmap.width),height=Math.round(bitmap.height*width/bitmap.width);
+ const canvas=new OffscreenCanvas(width,height);canvas.getContext('2d').drawImage(bitmap,0,0,width,height);bitmap.close();
+ return blobToDataURL(await canvas.convertToBlob({type:'image/jpeg',quality:.65}));
 }
-async function captureScreen(windowId){
-  await new Promise(resolve=>setTimeout(resolve,70));
-  const raw=await chrome.tabs.captureVisibleTab(windowId,{format:'jpeg',quality:65});
-  return compressScreenshot(raw);
-}
-chrome.runtime.onInstalled.addListener(()=>chrome.storage.local.set(initial));
+async function recover(){await serial(async()=>{const s=await state();const captures=s.captures.map(c=>c.imageStatus==='pending'?{...c,imageStatus:'failed',error:'Screenshot interrupted. Return to the page and retry.'}:c);await chrome.storage.local.set({...s,captures,paused:s.active?true:s.paused,error:s.active?'Recording interrupted. Resume or finish your saved session.':s.error})})}
+const ready=recover();
 chrome.sidePanel.setPanelBehavior({openPanelOnActionClick:true}).catch(()=>{});
-chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{(async()=>{
-  const current=await state();
-  if(message.type==='START_CAPTURE'){await chrome.storage.local.set({...initial,active:true,startedAt:Date.now(),lastCompletedSteps:[]});if(sender.tab?.windowId)chrome.sidePanel.open({windowId:sender.tab.windowId}).catch(()=>{});await setBadge(true,0);sendResponse({ok:true,active:true,count:0});return}
-  if(message.type==='STOP_CAPTURE'){await captureQueue;const latest=await state();const ordered=orderCaptures(latest.captures);const steps=ordered.map(captureToStep);const appIsWaiting=sender.tab?.url&&/^(https:\/\/(www\.)?pathira\.com|https:\/\/pathira\.netlify\.app|https:\/\/learnsify\.netlify\.app|http:\/\/(localhost|127\.0\.0\.1))/.test(sender.tab.url);await chrome.storage.local.set({...initial,lastCompletedSteps:appIsWaiting?[]:steps});await setBadge(false);sendResponse({ok:true,active:false,steps,count:ordered.length});return}
-  if(message.type==='GET_STATUS'){sendResponse({ok:true,active:current.active,count:current.captures.length,startedAt:current.startedAt});return}
-  if(message.type==='GET_PENDING'){const {lastCompletedSteps=[]}=await chrome.storage.local.get({lastCompletedSteps:[]});if(lastCompletedSteps.length)await chrome.storage.local.remove('lastCompletedSteps');sendResponse({ok:true,steps:lastCompletedSteps});return}
-  if(message.type==='CAPTURE_CLICK'&&current.active){
-    captureQueue=captureQueue.then(async()=>{
-      const latest=await state();if(!latest.active||latest.captures.length>=MAX_CAPTURES)return latest.captures.length;
-      let screenshot=null;try{screenshot=await captureScreen(sender.tab?.windowId)}catch(error){console.warn('Pathira screenshot unavailable',error)}
-      const capture={...message.capture,pageTitle:sender.tab?.title||message.capture.pageTitle,url:sender.tab?.url||message.capture.url,screenshot,tabId:sender.tab?.id,sequence:latest.sequence+1,capturedAt:Date.now()};
-      const captures=[...latest.captures,capture];await chrome.storage.local.set({captures,sequence:capture.sequence});await setBadge(true,captures.length);return captures.length;
-    });
-    const count=await captureQueue;sendResponse({ok:true,active:true,count});return
+function screenshotJob(id,tab){images=images.catch(()=>{}).then(async()=>{
+ let screenshot=null,error=null;try{screenshot=await captureScreen(tab)}catch(e){error=e.message}
+ await serial(async()=>{const s=await state();if(!s.captures.some(c=>c.id===id))return;
+ const captures=s.captures.map(c=>c.id===id?{...c,screenshot,imageStatus:error?'failed':'saved',error}:c);
+ try{await chrome.storage.local.set({captures})}catch(e){await chrome.storage.local.set({error:'Screenshot could not be saved. Free storage and retry.',captures:s.captures.map(c=>c.id===id?{...c,imageStatus:'failed',error:'Storage full'}:c)})}
+ });
+}).catch(async e=>{await chrome.storage.local.set({error:e.message}).catch(()=>{})});}
+async function handle(message,sender){
+ await ready;
+ if(message.type==='STOP_CAPTURE'){
+  await serial(()=>chrome.storage.local.set({active:false,paused:false}));await images;
+  return serial(async()=>{const s=await state();if(!s.captures.length)return {ok:true,active:false,steps:s.lastCompletedSteps||[],batchId:s.batchId,count:s.lastCompletedSteps?.length||0};const steps=orderCaptures(s.captures).map(captureToStep);const batchId=s.sessionId||crypto.randomUUID();await chrome.storage.local.set({...initial,lastCompletedSteps:steps,batchId});await setBadge(false);return {ok:true,active:false,steps,batchId,count:steps.length}});
+ }
+ return serial(async()=>{
+  const s=await state();
+  if(message.type==='START_CAPTURE'){
+   if(s.active||s.captures.length)throw new Error('Resume or finish the existing recording first.');
+   if(s.lastCompletedSteps?.length)throw new Error('Import the saved recording before starting another.');
+   await chrome.storage.local.set({...initial,active:true,sessionId:crypto.randomUUID(),startedAt:Date.now()});await setBadge(true);return {ok:true,active:true,count:0};
   }
-  sendResponse({ok:true,active:current.active,count:current.captures.length});
-})().catch(error=>sendResponse({ok:false,error:error.message}));return true});
+  if(message.type==='PAUSE_CAPTURE'||message.type==='RESUME_CAPTURE'){if(!s.active)throw new Error('No recording to resume');await chrome.storage.local.set({paused:message.type==='PAUSE_CAPTURE',error:null});return {ok:true};}
+  if(message.type==='GET_STATUS')return {ok:true,active:s.active,paused:s.paused,count:s.captures.length,error:s.error};
+  if(message.type==='GET_PENDING')return {ok:true,steps:s.lastCompletedSteps||[],batchId:s.batchId};
+  if(message.type==='ACK_IMPORT'){if(message.batchId===s.batchId)await chrome.storage.local.set({lastCompletedSteps:[],batchId:null});return {ok:true};}
+  if(message.type==='RETRY_SCREENSHOT'){
+   const c=s.captures.find(c=>c.id===message.id);if(!c)throw new Error('Step not found');
+   const tab=await chrome.tabs.get(c.tabId);if(tab.url!==c.url)throw new Error('Return to the original page before retrying.');
+   await chrome.storage.local.set({captures:s.captures.map(x=>x.id===c.id?{...x,imageStatus:'pending',error:null}:x)});screenshotJob(c.id,tab);return {ok:true};
+  }
+  if(message.type==='CAPTURE_CLICK'||message.type==='MANUAL_CAPTURE'){
+   if(!s.active||s.paused)return {ok:true,active:s.active,count:s.captures.length};
+   if(s.captures.length>=MAX_CAPTURES){await chrome.storage.local.set({paused:true,error:'50-step limit reached. Finish and import this recording.'});return {ok:false,error:'50-step limit reached'};}
+   const tab=sender.tab||(await chrome.tabs.query({active:true,lastFocusedWindow:true}))[0];if(!tab)throw new Error('No browser tab available');
+   const previous=s.captures.at(-1),event=message.capture||{};
+   const duplicate=!!previous&&previous.url===tab.url&&previous.description===event.description&&Date.now()-previous.capturedAt<800;
+   const capture={...event,id:crypto.randomUUID(),sessionId:s.sessionId,manual:message.type==='MANUAL_CAPTURE',pageTitle:tab.title,url:tab.url,tabId:tab.id,sequence:s.sequence+1,capturedAt:Date.now(),imageStatus:'pending',screenshot:null,duplicate};
+   const bytes=await chrome.storage.local.getBytesInUse(null);
+   await chrome.storage.local.set({captures:[...s.captures,capture],sequence:capture.sequence,error:bytes>40*1024*1024?'Storage exceeds 40 MB. Finish and import soon.':s.error});
+   screenshotJob(capture.id,tab);await setBadge(true,s.captures.length+1);return {ok:true,active:true,count:s.captures.length+1};
+  }
+  return {ok:true,active:s.active,count:s.captures.length};
+ });
+}
+chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{handle(message,sender).then(sendResponse).catch(async error=>{await chrome.storage.local.set({error:error.message}).catch(()=>{});sendResponse({ok:false,error:error.message})});return true});

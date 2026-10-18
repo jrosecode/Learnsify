@@ -28,10 +28,33 @@ function toggleBrowserCapture(){
   window.addEventListener('message',once);
 }
 function showExtensionHelp(){if(document.querySelector('#overlay'))return;document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="overlay"><div class="modal"><div class="modal-head"><h2>Install Pathira Capture</h2><button class="btn icon" id="close">×</button></div><p class="sub">Chrome needs the Pathira extension to record clicks across tabs.</p><ol><li>Download or clone the GitHub repository.</li><li>Open <strong>chrome://extensions</strong> and enable Developer mode.</li><li>Choose <strong>Load unpacked</strong> and select the <strong>extension</strong> folder.</li><li>Refresh Pathira and start capturing.</li></ol><div class="modal-actions"><a class="btn primary" href="https://github.com/jrosecode/Pathira" target="_blank">Get extension</a></div></div></div>`);const overlay=document.querySelector('#overlay');overlay.querySelector('#close').onclick=()=>overlay.remove()}
-window.addEventListener('message',event=>{
+let importing=false;
+window.addEventListener('message',async event=>{
   if(event.source!==window)return;
   if(event.data?.type==='PATHIRA_CAPTURE_STATUS'){captureActive=!!event.data.active;captureCount=event.data.count||0;if(view==='editor')render()}
-  if(event.data?.type==='PATHIRA_CAPTURE_RESULT'){captureActive=false;captureCount=0;const steps=event.data.steps||[];if(steps.length){active.steps.push(...steps);save();toast(`${steps.length} captured step${steps.length===1?'':'s'} added`)}else toast('No clicks were captured');if(view==='editor')render()}
+  if(event.data?.type==='PATHIRA_CAPTURE_RESULT'){
+    if(event.data.ok===false){toast(event.data.error||'Capture failed');return;}
+    captureActive=false;captureCount=0;const steps=event.data.steps||[];
+    if(!steps.length||importing)return;
+    importing=true;
+    try{
+      // A batch is acknowledged only after durable cloud persistence. Replayed IDs are ignored.
+      let target=workflows.find(w=>w.captureBatches?.includes(event.data.batchId));
+      if(!target){
+        target=active||createWorkflow('Captured workflow','Operations');
+        if(!workflows.includes(target)){target.steps=[];workflows.unshift(target);}
+        const ids=new Set(target.steps.map(s=>s.id));target.steps.push(...steps.filter(s=>!ids.has(s.id)));
+        target.captureBatches=[...(target.captureBatches||[]),event.data.batchId].filter(Boolean);
+      }
+      await saveLibrary(user,workflows);
+      active=target;view='editor';render();
+      window.postMessage({type:'PATHIRA_ACK_IMPORT',batchId:event.data.batchId},location.origin);
+      toast(`${steps.length} captured steps saved`);
+    }catch(error){toast('Import not saved. Your recording is retained in the extension. Refresh to retry.');}
+    finally{importing=false;}
+  }
 });
 window.postMessage({type:'PATHIRA_STATUS_REQUEST'},'*');
 const hashId=location.hash.match(/^#guide\/(.+)$/)?.[1];if(hashId){active=workflows.find(x=>x.id===hashId);if(active){view='editor';render();showGuide()}else render()}else render();
+
+window.postMessage({type:'PATHIRA_GET_PENDING'},location.origin);

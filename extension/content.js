@@ -4,7 +4,7 @@ function describe(target){
   const type={a:'link',button:'button',input:'field',select:'dropdown',textarea:'field',option:'option'}[tag]||tag;
   const labelledBy=target.getAttribute?.('aria-labelledby');
   const labelledText=labelledBy?document.getElementById(labelledBy)?.innerText:'';
-  const label=clean(target.getAttribute?.('aria-label'))||clean(labelledText)||clean(target.innerText)||clean(target.value)||clean(target.placeholder)||clean(target.name)||clean(target.id)||tag;
+  const label=clean(target.getAttribute?.('aria-label'))||clean(labelledText)||clean(target.innerText)||clean(target.placeholder)||clean(target.name)||clean(target.id)||tag;
   return `“${label}” ${type}`;
 }
 document.addEventListener('click',event=>{
@@ -18,9 +18,9 @@ document.addEventListener('click',event=>{
 if(['pathira.com','www.pathira.com','pathira.netlify.app','learnsify.netlify.app','localhost','127.0.0.1'].includes(location.hostname)){
   window.addEventListener('message',event=>{
     if(event.source!==window)return;
-    const map={PATHIRA_START_CAPTURE:'START_CAPTURE',PATHIRA_STOP_CAPTURE:'STOP_CAPTURE',PATHIRA_STATUS_REQUEST:'GET_STATUS'};
+    const map={PATHIRA_START_CAPTURE:'START_CAPTURE',PATHIRA_STOP_CAPTURE:'STOP_CAPTURE',PATHIRA_STATUS_REQUEST:'GET_STATUS',PATHIRA_GET_PENDING:'GET_PENDING',PATHIRA_ACK_IMPORT:'ACK_IMPORT'};
     const type=map[event.data?.type];if(!type)return;
-    chrome.runtime.sendMessage({type}).then(result=>window.postMessage({type:type==='STOP_CAPTURE'?'PATHIRA_CAPTURE_RESULT':'PATHIRA_CAPTURE_STATUS',...result},'*')).catch(()=>window.postMessage({type:'PATHIRA_EXTENSION_MISSING'},'*'));
+    chrome.runtime.sendMessage({type,batchId:event.data.batchId}).then(result=>window.postMessage({type:['STOP_CAPTURE','GET_PENDING'].includes(type)?'PATHIRA_CAPTURE_RESULT':'PATHIRA_CAPTURE_STATUS',...result},'*')).catch(()=>window.postMessage({type:'PATHIRA_EXTENSION_MISSING'},'*'));
   });
   chrome.runtime.sendMessage({type:'GET_STATUS'}).then(result=>window.postMessage({type:'PATHIRA_CAPTURE_STATUS',...result},'*')).catch(()=>{});
   chrome.runtime.sendMessage({type:'GET_PENDING'}).then(result=>{if(result.steps?.length)window.postMessage({type:'PATHIRA_CAPTURE_RESULT',...result},'*')}).catch(()=>{});
