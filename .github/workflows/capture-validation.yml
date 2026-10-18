@@ -4,6 +4,7 @@ on:
     paths:
       - 'extension/**'
       - 'src/**'
+      - 'db/**'
       - 'test/**'
       - 'scripts/**'
       - 'server/**'
@@ -56,4 +57,4 @@ jobs:
       PGDATABASE: pathira_test
     steps:
       - uses: actions/checkout@v4
-      - run: psql -v ON_ERROR_STOP=1 -f test/sql/setup.sql -f db/releases-2-6.sql -f db/restrict-anonymous-grants.sql -f test/sql/access.sql
+      - run: psql -v ON_ERROR_STOP=1 -f test/sql/setup.sql -f db/releases-2-6.sql -f db/restrict-anonymous-grants.sql -f db/product-completion.sql -f test/sql/access.sql -f test/sql/completion.sql

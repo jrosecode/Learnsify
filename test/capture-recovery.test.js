@@ -1,3 +1,4 @@
+import {duplicateClick} from '../extension/lib/duplicates.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -9,7 +10,7 @@ function harness(seed={}){
  let data=structuredClone(seed),listener,failures=0;
  const tab={id:1,windowId:1,url:'https://example.com',title:'Example'};
  const chrome={storage:{local:{get:async()=>structuredClone(data),set:async patch=>{Object.assign(data,structuredClone(patch))},getBytesInUse:async()=>0}},action:{setBadgeBackgroundColor:async()=>{},setBadgeText:async()=>{}},sidePanel:{setPanelBehavior:async()=>{}},tabs:{sendMessage:async()=>({ok:true}),query:async()=>[tab],get:async()=>tab,captureVisibleTab:async()=>{if(failures-->0)throw Error('Screenshot unavailable');return 'data:image/jpeg;base64,AA=='}},runtime:{onMessage:{addListener:fn=>listener=fn}}};
- vm.runInNewContext(source,{URL,chrome,createPrivateStorage:raw=>({get:()=>raw.get(null),set:patch=>raw.set(patch)}),crypto:webcrypto,captureToStep,orderCaptures,setTimeout:fn=>setTimeout(fn,0),fetch:async()=>({blob:async()=>new Blob(['image'])}),createImageBitmap:async()=>({width:800,height:600,close(){}}),OffscreenCanvas:class{getContext(){return {drawImage(){}}}async convertToBlob(){return new Blob(['image'])}},Uint8Array,btoa});
+ vm.runInNewContext(source,{URL,chrome,duplicateClick,createPrivateStorage:raw=>({get:()=>raw.get(null),set:patch=>raw.set(patch)}),crypto:webcrypto,captureToStep,orderCaptures,setTimeout:fn=>setTimeout(fn,0),fetch:async()=>({blob:async()=>new Blob(['image'])}),createImageBitmap:async()=>({width:800,height:600,close(){}}),OffscreenCanvas:class{getContext(){return {drawImage(){}}}async convertToBlob(){return new Blob(['image'])}},Uint8Array,btoa});
  return {send:(type,extra={})=>new Promise(resolve=>listener({type,...extra},{tab},r=>resolve(structuredClone(r)))),data:()=>structuredClone(data),fail:()=>failures++};
 }
 test('failed screenshot preserves event and later screenshots still complete',async()=>{

@@ -1,3 +1,4 @@
+import {duplicateClick} from './lib/duplicates.js';
 import {createPrivateStorage} from './lib/private-storage.js';
 import {captureToStep,orderCaptures} from './lib/capture.js';
 const privateStorage=createPrivateStorage(chrome.storage.local);
@@ -59,7 +60,8 @@ async function handle(message,sender){
    const hostname=new URL(tab.url).hostname,privacy=s.privacy||{};const matches=list=>(list||[]).some(d=>hostname===d||hostname.endsWith('.'+d));
    if(matches(privacy.blocked)||privacy.allowed?.length&&!matches(privacy.allowed)){await privateStorage.set({error:'Capture blocked by domain privacy settings.'});return {ok:false,error:'Capture blocked on this domain'};}
    const previous=s.captures.at(-1),event=message.capture||{};
-   const duplicate=!!previous&&previous.url===tab.url&&previous.description===event.description&&Date.now()-previous.capturedAt<800;
+   const duplicate=message.type==='CAPTURE_CLICK'&&duplicateClick(previous,event,tab);
+   if(duplicate)return {ok:true,active:true,count:s.captures.length,filtered:true};
    const capture={...event,id:crypto.randomUUID(),sessionId:s.sessionId,manual:message.type==='MANUAL_CAPTURE',pageTitle:tab.title,url:tab.url,tabId:tab.id,sequence:s.sequence+1,capturedAt:Date.now(),imageStatus:'pending',screenshot:null,duplicate};
    const bytes=await chrome.storage.local.getBytesInUse(null);
    await privateStorage.set({captures:[...s.captures,capture],sequence:capture.sequence,error:bytes>40*1024*1024?'Storage exceeds 40 MB. Finish and import soon.':s.error});

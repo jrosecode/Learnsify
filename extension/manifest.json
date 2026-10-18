@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "minimum_chrome_version": "116",
   "name": "Pathira",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Capture browser clicks and screenshots in order and turn them into Pathira guide steps.",
   "icons": {"16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png"},
   "permissions": ["storage", "unlimitedStorage", "tabs", "sidePanel"],
