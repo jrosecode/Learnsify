@@ -1,9 +1,10 @@
+import {loginURL} from './navigation.js';
 import {createClient} from './vendor/supabase.js';
 export const supabase=createClient('https://pdrnypffiglgealwgcdw.supabase.co','sb_publishable_sNKPkbT2NlL368KKapPBFg_wtDApyAF');
 export async function requireUser(){
  const {data:{session},error}=await supabase.auth.getSession();
- if(error||!session){location.replace('login.html');throw new Error('Please sign in');}
- supabase.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT')location.replace('login.html')});
+ if(error||!session){location.replace(loginURL(location));throw new Error('Please sign in');}
+ supabase.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT')location.replace(loginURL(location))});
  return session.user;
 }
 export async function loadLibrary(user){
