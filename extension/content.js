@@ -25,3 +25,15 @@ if(['pathira.com','www.pathira.com','pathira.netlify.app','learnsify.netlify.app
   chrome.runtime.sendMessage({type:'GET_STATUS'}).then(result=>window.postMessage({type:'PATHIRA_CAPTURE_STATUS',...result},'*')).catch(()=>{});
   chrome.runtime.sendMessage({type:'GET_PENDING'}).then(result=>{if(result.steps?.length)window.postMessage({type:'PATHIRA_CAPTURE_RESULT',...result},'*')}).catch(()=>{});
 }
+// Mask likely sensitive fields and text on the device before screenshot transmission.
+const privacyMasks=[];
+chrome.runtime.onMessage.addListener((message,sender,reply)=>{
+ if(message.type==='CLEAR_PRIVACY_MASKS'){privacyMasks.splice(0).forEach(x=>x.remove());reply({ok:true});return;}
+ if(message.type!=='PREPARE_PRIVATE_SCREENSHOT')return;
+ privacyMasks.splice(0).forEach(x=>x.remove());
+ const cover=rect=>{if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight)return;const mask=document.createElement('div');mask.dataset.pathiraControl='privacy';Object.assign(mask.style,{position:'fixed',left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px',background:'#000',zIndex:'2147483647',pointerEvents:'none'});document.documentElement.append(mask);privacyMasks.push(mask)};
+ document.querySelectorAll('input,textarea').forEach(el=>{if(el.type==='password'||/email|tel|cc-|card|ssn|social|birth|health|medical/i.test([el.type,el.name,el.id,el.autocomplete].join(' ')))cover(el.getBoundingClientRect())});
+ const walker=document.createTreeWalker(document.body||document.documentElement,NodeFilter.SHOW_TEXT);let node,count=0;
+ while((node=walker.nextNode())&&count++<3000){if(node.parentElement?.closest('script,style,[data-pathira-control]'))continue;if(/\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b|\b\d{3}-\d{2}-\d{4}\b|\b(?:\d[ -]?){13,16}\b/i.test(node.textContent)){const range=document.createRange();range.selectNode(node);for(const rect of range.getClientRects())cover(rect)}}
+ reply({ok:true,masked:privacyMasks.length});
+});

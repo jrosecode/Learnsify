@@ -9,3 +9,6 @@ document.querySelector('#manual-capture').onclick=()=>send('MANUAL_CAPTURE');
 list.onclick=event=>{const button=event.target.closest('.retry');if(button)send('RETRY_SCREENSHOT',{id:button.dataset.id})};
 document.querySelector('#open-pathira').addEventListener('click',()=>chrome.tabs.create({url:'https://pathira.com'}));
 chrome.storage.onChanged.addListener(()=>render());render();
+
+chrome.storage.local.get('privacy').then(({privacy={}})=>{document.querySelector('#allowed-domains').value=(privacy.allowed||[]).join(', ');document.querySelector('#blocked-domains').value=(privacy.blocked||[]).join(', ')});
+document.querySelector('#save-privacy').onclick=async()=>{const domains=id=>document.querySelector(id).value.split(',').map(v=>v.trim().toLowerCase()).filter(Boolean);await send('SET_PRIVACY',{privacy:{allowed:domains('#allowed-domains'),blocked:domains('#blocked-domains')}});document.querySelector('#privacy-status').textContent='Domain rules saved'};

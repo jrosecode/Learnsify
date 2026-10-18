@@ -10,7 +10,7 @@ async function captureScreen(tab){
  await new Promise(r=>setTimeout(r,600));
  const [current]=await chrome.tabs.query({active:true,windowId:tab.windowId});
  if(current?.id!==tab.id||current?.url!==tab.url)throw new Error('Page changed before screenshot. Return to the page and retry.');
- const raw=await chrome.tabs.captureVisibleTab(tab.windowId,{format:'jpeg',quality:65});
+ let raw;try{await chrome.tabs.sendMessage(tab.id,{type:'PREPARE_PRIVATE_SCREENSHOT'});raw=await chrome.tabs.captureVisibleTab(tab.windowId,{format:'jpeg',quality:65});}finally{await chrome.tabs.sendMessage(tab.id,{type:'CLEAR_PRIVACY_MASKS'}).catch(()=>{})}
  const bitmap=await createImageBitmap(await (await fetch(raw)).blob());
  const width=Math.min(1200,bitmap.width),height=Math.round(bitmap.height*width/bitmap.width);
  const canvas=new OffscreenCanvas(width,height);canvas.getContext('2d').drawImage(bitmap,0,0,width,height);bitmap.close();
@@ -40,6 +40,7 @@ async function handle(message,sender){
    await chrome.storage.local.set({...initial,active:true,sessionId:crypto.randomUUID(),startedAt:Date.now()});await setBadge(true);return {ok:true,active:true,count:0};
   }
   if(message.type==='PAUSE_CAPTURE'||message.type==='RESUME_CAPTURE'){if(!s.active)throw new Error('No recording to resume');await chrome.storage.local.set({paused:message.type==='PAUSE_CAPTURE',error:null});return {ok:true};}
+  if(message.type==='SET_PRIVACY'){await chrome.storage.local.set({privacy:message.privacy});return {ok:true};}
   if(message.type==='GET_STATUS')return {ok:true,active:s.active,paused:s.paused,count:s.captures.length,error:s.error};
   if(message.type==='GET_PENDING')return {ok:true,steps:s.lastCompletedSteps||[],batchId:s.batchId};
   if(message.type==='ACK_IMPORT'){if(message.batchId===s.batchId)await chrome.storage.local.set({lastCompletedSteps:[],batchId:null});return {ok:true};}
@@ -52,6 +53,8 @@ async function handle(message,sender){
    if(!s.active||s.paused)return {ok:true,active:s.active,count:s.captures.length};
    if(s.captures.length>=MAX_CAPTURES){await chrome.storage.local.set({paused:true,error:'50-step limit reached. Finish and import this recording.'});return {ok:false,error:'50-step limit reached'};}
    const tab=message.type==='MANUAL_CAPTURE'?(await chrome.tabs.query({active:true,lastFocusedWindow:true}))[0]:sender.tab;if(!tab)throw new Error('No browser tab available');
+   const hostname=new URL(tab.url).hostname,privacy=s.privacy||{};const matches=list=>(list||[]).some(d=>hostname===d||hostname.endsWith('.'+d));
+   if(matches(privacy.blocked)||privacy.allowed?.length&&!matches(privacy.allowed)){await chrome.storage.local.set({error:'Capture blocked by domain privacy settings.'});return {ok:false,error:'Capture blocked on this domain'};}
    const previous=s.captures.at(-1),event=message.capture||{};
    const duplicate=!!previous&&previous.url===tab.url&&previous.description===event.description&&Date.now()-previous.capturedAt<800;
    const capture={...event,id:crypto.randomUUID(),sessionId:s.sessionId,manual:message.type==='MANUAL_CAPTURE',pageTitle:tab.title,url:tab.url,tabId:tab.id,sequence:s.sequence+1,capturedAt:Date.now(),imageStatus:'pending',screenshot:null,duplicate};
