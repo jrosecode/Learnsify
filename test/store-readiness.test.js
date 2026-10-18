@@ -34,3 +34,12 @@ test('Pathira is the official website and extension brand',async()=>{
   assert.match(panel,/>Pathira</);
   assert.match(bridge,/pathira\.com/);
 });
+
+test('Pathira website ships the supplied favicon assets',async()=>{
+  const website=await readFile(new URL('../src/index.html',import.meta.url),'utf8');
+  assert.match(website,/rel="icon"[^>]+favicon-32\.png/);
+  assert.match(website,/rel="apple-touch-icon"[^>]+apple-touch-icon\.png/);
+  for(const file of ['favicon-16.png','favicon-32.png','apple-touch-icon.png']){
+    assert.ok((await stat(new URL(`../src/assets/${file}`,import.meta.url))).size>100);
+  }
+});
