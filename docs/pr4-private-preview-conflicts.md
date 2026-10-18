@@ -1,0 +1,7 @@
+# PR #4: private previews and revision conflict recovery
+
+The encrypted vault previously exported the entire private preview into plaintext sessionStorage. This change opens a separate viewer and transfers the snapshot over a random, same-origin BroadcastChannel. No draft is published or put into persistent browser storage. The channel closes after acknowledgement or 30 seconds; the receiver times out after five seconds. Reloading a preview requires reopening it from the editor. Pop-up blocking produces a clear message. Old preview sessionStorage entries are cleared when either updated page loads.
+
+Revision conflicts previously surfaced only as a toast, leaving no direct route to preserve both versions. A conflict dialog now offers a separate local copy with a new guide ID and reset revision, or an explicitly confirmed discard/reload. Copying downloads referenced media first and removes old cloud paths, so the copied media will be uploaded under its own guide. Closing the dialog preserves local work. No server revision is forcibly overwritten.
+
+Validation: unit coverage for conflict detection, media preservation and independent copies; Chromium coverage for preview delivery, null opener, no plaintext preview storage, expired previews on reload, and conflict-copy persistence alongside the original. Existing unit, capture, mobile and database checks continue to run. No schema changes or new paid services.
