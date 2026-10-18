@@ -25,3 +25,6 @@ Pathira includes a Chrome/Edge Manifest V3 extension in `extension/`.
 7. Choose **Stop and import**, then open Pathira to add the ordered steps to your guide.
 
 Each click is saved in order with a compressed screenshot, page title, URL, element type, accessible label/text, click coordinates, and an on-screen highlight around the clicked element. Captures are capped at 50 steps per session to keep browser storage responsive. Browser-internal pages such as `chrome://` cannot be captured because Chrome blocks extensions on those pages.
+
+## Supabase authentication
+The web app uses Pathira Project (`pdrnypffiglgealwgcdw`). Only the public publishable key is shipped. Each user owns a private workflow library protected by RLS. Sign in or register at `/login.html`. Configure Supabase Auth URL redirects for `https://pathira.com/login.html`, `https://pathira.com/login.html?recovery=1`, and the equivalent Netlify URLs for email confirmation and recovery. Existing browser-local guides are retained locally and are not automatically assigned to a new account.
