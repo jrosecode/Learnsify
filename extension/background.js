@@ -51,7 +51,7 @@ async function handle(message,sender){
   if(message.type==='CAPTURE_CLICK'||message.type==='MANUAL_CAPTURE'){
    if(!s.active||s.paused)return {ok:true,active:s.active,count:s.captures.length};
    if(s.captures.length>=MAX_CAPTURES){await chrome.storage.local.set({paused:true,error:'50-step limit reached. Finish and import this recording.'});return {ok:false,error:'50-step limit reached'};}
-   const tab=sender.tab||(await chrome.tabs.query({active:true,lastFocusedWindow:true}))[0];if(!tab)throw new Error('No browser tab available');
+   const tab=message.type==='MANUAL_CAPTURE'?(await chrome.tabs.query({active:true,lastFocusedWindow:true}))[0]:sender.tab;if(!tab)throw new Error('No browser tab available');
    const previous=s.captures.at(-1),event=message.capture||{};
    const duplicate=!!previous&&previous.url===tab.url&&previous.description===event.description&&Date.now()-previous.capturedAt<800;
    const capture={...event,id:crypto.randomUUID(),sessionId:s.sessionId,manual:message.type==='MANUAL_CAPTURE',pageTitle:tab.title,url:tab.url,tabId:tab.id,sequence:s.sequence+1,capturedAt:Date.now(),imageStatus:'pending',screenshot:null,duplicate};
