@@ -2,3 +2,5 @@ node_modules/
 .netlify/
 .store-build/
 .DS_Store
+
+dist/downloads/

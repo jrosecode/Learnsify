@@ -26,6 +26,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test && npm run build
+      - run: node scripts/verify-extension-package.mjs
       - run: npm install --no-save playwright@1.58.2
       - run: npx playwright install --with-deps chromium
       - run: node scripts/capture-smoke.cjs
