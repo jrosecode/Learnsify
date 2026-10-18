@@ -14,3 +14,5 @@ alter table storage.objects enable row level security;
 grant select,insert,delete on storage.objects to authenticated;
 create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;
 insert into auth.users values('11111111-1111-4111-8111-111111111111','owner@example.com',now()),('22222222-2222-4222-8222-222222222222','viewer@example.com',now()),('33333333-3333-4333-8333-333333333333','outsider@elsewhere.com',now());
+
+alter default privileges in schema public grant execute on functions to anon,authenticated;

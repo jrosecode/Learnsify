@@ -21,3 +21,7 @@ select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111'
 select public.revoke_share('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
 set role anon;
 do $$begin begin perform public.shared_document(current_setting('test.token')::uuid,'secret');raise exception 'REVOCATION_FAILED';exception when others then if sqlerrm='REVOCATION_FAILED' then raise;end if;end;end$$;
+
+do $$begin
+ if has_function_privilege('anon','public.save_guide(jsonb,integer)','execute') or has_function_privilege('anon','public.invite_member(uuid,text,text)','execute') then raise exception 'Anonymous privileged RPC grant';end if;
+end$$;

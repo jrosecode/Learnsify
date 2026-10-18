@@ -27,3 +27,7 @@ Default browser encryption stores its key in the same profile; use the separate 
 ## Validation
 
 `npm test` includes capture recovery and import-injection/history tests. `npm run build` bundles pinned dependencies. GitHub Actions runs real Chromium capture and workspace smoke tests and an isolated Postgres 17 migration/access-control test. Mocked workspace browser tests validate local behaviors; they do not prove production Supabase integration.
+
+## Production migration status — October 18, 2026 UTC
+
+The user explicitly approved the migration. Applied `workspace_guides_publishing_learning` (20261018031344), followed by `restrict_workspace_rpc_anonymous_grants` to remove Supabase's direct default anon grants on privileged RPCs. Verified all ten tables have RLS enabled, guide-assets remains private with a 20 MB limit, anonymous save/invite execution is denied, anonymous protected-share lookup remains available, and the legacy library exists. Apply both SQL files in order in new environments. Frontend PR remains a draft; database approval does not establish production UI integration validation or completion of the remaining commercial features.
