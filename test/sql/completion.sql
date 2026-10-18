@@ -26,3 +26,11 @@ select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333'
 do $$begin if (select count(*) from public.workspace_audit)>0 then raise exception 'Audit tenant leak';end if;end$$;
 set role anon;
 do $$begin if has_function_privilege('anon','public.review_guide(uuid,integer,text,text)','execute') then raise exception 'Anonymous review grant';end if;end$$;
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select public.begin_delete_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+select public.delete_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+do $$declare w uuid;begin select id into w from public.workspaces where owner_id=auth.uid();
+ begin insert into storage.objects(bucket_id,name) values('guide-assets',w::text||'/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/late');raise exception 'LATE_UPLOAD';exception when others then if sqlerrm='LATE_UPLOAD' then raise;end if;end;
+ begin perform public.save_guide(jsonb_build_object('id','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','workspaceId',w,'title','Resurrected','steps','[]'::jsonb),0);raise exception 'RESURRECTED';exception when others then if sqlerrm='RESURRECTED' then raise;end if;end;
+end$$;

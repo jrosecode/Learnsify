@@ -4,6 +4,11 @@ alter table public.workspace_members add constraint workspace_members_role_check
 alter table public.workspace_invites drop constraint workspace_invites_role_check;
 alter table public.workspace_invites add constraint workspace_invites_role_check check(role in ('admin','editor','reviewer','viewer'));
 alter table public.guides add column deleting_at timestamptz;
+create table public.guide_deletions(guide_id uuid primary key,workspace_id uuid not null references public.workspaces on delete cascade,created_at timestamptz not null default now());
+alter table public.guide_deletions enable row level security;
+grant select on public.guide_deletions to authenticated;
+revoke insert,update,delete on public.guide_deletions from authenticated,anon;
+create policy read_deletions on public.guide_deletions for select to authenticated using(pathira_private.can_access(workspace_id));
 create table public.guide_reviews(
  guide_id uuid references public.guides on delete cascade, revision integer not null,
  status text not null check(status in ('pending','approved','changes_requested')),
@@ -62,16 +67,24 @@ create function pathira_private.transfer_guide(g uuid,u uuid) returns void langu
  end$$;
 create function public.transfer_guide(g uuid,u uuid) returns void language sql security invoker set search_path='' as $$select pathira_private.transfer_guide(g,u)$$;
 -- Deletion is a tombstone until all objects have been removed through the Storage API.
-create function pathira_private.begin_delete_guide(g uuid) returns void language plpgsql security definer set search_path='' as $$begin
+create function pathira_private.begin_delete_guide(g uuid,w uuid default null) returns void language plpgsql security definer set search_path='' as $$declare target uuid;begin
  perform pg_advisory_xact_lock(hashtextextended(g::text,0));
- if not pathira_private.can_guide(g,true) then raise exception 'Editor access required';end if;
+ select workspace_id into target from public.guides where id=g;
+ if target is null then select workspace_id into target from public.guide_deletions where guide_id=g;end if;
+ target:=coalesce(target,w);
+ if target is null or not pathira_private.can_access(target,true) then raise exception 'Editor access required';end if;
+ insert into public.guide_deletions(guide_id,workspace_id) values(g,target) on conflict do nothing;
  update public.guides set deleting_at=coalesce(deleting_at,now()) where id=g;
  update public.guide_shares set enabled=false where guide_id=g;
  end$$;
-create function public.begin_delete_guide(g uuid) returns void language sql security invoker set search_path='' as $$select pathira_private.begin_delete_guide(g)$$;
+create function public.begin_delete_guide(g uuid,w uuid default null) returns void language sql security invoker set search_path='' as $$select pathira_private.begin_delete_guide(g,w)$$;
 create or replace function pathira_private.delete_guide(g uuid) returns void language plpgsql security definer set search_path='' as $$declare row public.guides;begin
  perform pg_advisory_xact_lock(hashtextextended(g::text,0));
  select * into row from public.guides where id=g for update;
+ if not found then
+  if exists(select 1 from public.guide_deletions where guide_id=g and pathira_private.can_access(workspace_id,true)) then return;end if;
+  raise exception 'Editor access required';
+ end if;
  if not pathira_private.can_guide(g,true) then raise exception 'Editor access required';end if;
  if row.deleting_at is null then raise exception 'Begin deletion first';end if;
  if exists(select 1 from storage.objects where bucket_id='guide-assets' and name like row.workspace_id::text||'/'||g::text||'/%') then raise exception 'Media cleanup incomplete. Retry deletion.';end if;
@@ -79,9 +92,10 @@ create or replace function pathira_private.delete_guide(g uuid) returns void lan
  end$$;
 -- Prevent a normal save from clearing the deletion tombstone.
 create function pathira_private.guard_guide() returns trigger language plpgsql security definer set search_path='' as $$begin
+ if TG_OP='INSERT' then if exists(select 1 from public.guide_deletions where guide_id=new.id) then raise exception 'Guide was deleted. Save a new copy.';end if;return new;end if;
  if old.deleting_at is not null and (new.body is distinct from old.body or new.revision<>old.revision or new.deleting_at is null) then raise exception 'Guide deletion pending';end if;
  return new;end$$;
-create trigger guard_guide before update on public.guides for each row execute function pathira_private.guard_guide();
+create trigger guard_guide before insert or update on public.guides for each row execute function pathira_private.guard_guide();
 create function pathira_private.guard_publication() returns trigger language plpgsql security definer set search_path='' as $$declare row public.guides;st jsonb;p jsonb;field text;assembled jsonb:='[]'::jsonb;begin
  select * into row from public.guides where id=new.guide_id for update;
  if new.enabled then
@@ -107,7 +121,7 @@ create function pathira_private.guard_publication() returns trigger language plp
 create trigger guard_publication before insert or update on public.guide_shares for each row execute function pathira_private.guard_publication();
 create function pathira_private.asset_writable(object_name text) returns boolean language plpgsql stable security definer set search_path='' as $$declare w uuid;g uuid;begin
  w:=split_part(object_name,'/',1)::uuid;g:=split_part(object_name,'/',2)::uuid;
- return pathira_private.can_access(w,true) and not exists(select 1 from public.guides where id=g and (deleting_at is not null or workspace_id<>w));
+ return pathira_private.can_access(w,true) and not exists(select 1 from public.guide_deletions where guide_id=g) and not exists(select 1 from public.guides where id=g and (deleting_at is not null or workspace_id<>w));
  exception when invalid_text_representation then return false;end$$;
 drop policy pathira_asset_insert on storage.objects;
 create policy pathira_asset_insert on storage.objects for insert to authenticated with check(bucket_id='guide-assets' and pathira_private.asset_writable(name));
