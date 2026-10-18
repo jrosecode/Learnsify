@@ -12,13 +12,12 @@
 - [x] Automated tests and real cross-tab browser test
 - [x] Deterministic ZIP packaging script
 
-## Waiting for final product name
-- [ ] Replace `[FINAL NAME]` in listing copy
-- [ ] Package with final manifest name
-- [ ] Confirm final logo treatment and promotional tile
-- [ ] Rename companion website/repository only if desired
+## Brand finalized
+- [x] Official product name: Pathira
+- [x] Final listing copy uses Pathira
+- [x] Packaging script produces a Pathira-branded manifest
 
-## Requires owner action or approval
+## Remaining owner decisions
 - [ ] Create/confirm Chrome Web Store developer account and pay Google’s one-time registration fee
 - [ ] Choose public/unlisted/private visibility
 - [ ] Complete Developer Dashboard privacy/data-use answers

@@ -20,6 +20,17 @@ test('privacy policy discloses screenshot, URL, storage, and deletion behavior',
 test('store listing and permission justifications are prepared',async()=>{
   const listing=await readFile(new URL('../store/listing.md',import.meta.url),'utf8');
   const permissions=await readFile(new URL('../store/permission-justifications.md',import.meta.url),'utf8');
-  assert.match(listing,/\[FINAL NAME\]/);
+  assert.match(listing,/Pathira/);
+  assert.doesNotMatch(listing,/\[FINAL NAME\]/);
   for(const permission of ['sidePanel','storage','unlimitedStorage','tabs','<all_urls>'])assert.match(permissions,new RegExp(permission.replace(/[<>]/g,'\\$&')));
+});
+
+test('Pathira is the official website and extension brand',async()=>{
+  const website=await readFile(new URL('../src/index.html',import.meta.url),'utf8');
+  const panel=await readFile(new URL('../extension/sidepanel.html',import.meta.url),'utf8');
+  const bridge=await readFile(new URL('../extension/content.js',import.meta.url),'utf8');
+  assert.equal(manifest.name,'Pathira');
+  assert.match(website,/Pathira —/);
+  assert.match(panel,/>Pathira</);
+  assert.match(bridge,/pathira\.com/);
 });
