@@ -9,14 +9,14 @@ const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/ht
  let context=await launch();let worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker');let id=new URL(worker.url()).host;
  let panel=await context.newPage();await panel.goto(`chrome-extension://${id}/sidepanel.html`);
  const send=(type,extra={})=>panel.evaluate(async({type,extra})=>chrome.runtime.sendMessage({type,...extra}),{type,extra});
- const storage=()=>panel.evaluate(()=>chrome.storage.local.get(null));
+ const storage=()=>send('GET_PANEL_STATE');
  const until=async predicate=>{for(let i=0;i<100;i++){if(predicate(await storage()))return;await new Promise(r=>setTimeout(r,100));}throw Error('Capture state timed out: '+JSON.stringify(await storage()));};
  assert.equal((await send('START_CAPTURE')).ok,true);
  const page=await context.newPage();await page.goto('http://127.0.0.1:4188');await page.click('#one');
  await until(data=>data.captures?.length===1);
  let data=await storage();assert.equal(data.captures[0].imageStatus,'pending');console.log('PASS event checkpoint precedes screenshot');
  await until(data=>['saved','failed'].includes(data.captures?.[0]?.imageStatus));
- data=await storage();assert.equal(data.captures[0].imageStatus,'saved',data.captures[0].error);console.log('PASS real screenshot captured');
+ data=await storage();assert.equal(data.captures[0].imageStatus,'saved',data.captures[0].error);const raw=await panel.evaluate(()=>chrome.storage.local.get(null));assert.equal(raw.captures.encrypted,true);assert.ok(!JSON.stringify(raw.captures).includes('data:image'));console.log('PASS real screenshot captured and encrypted at rest');
  await send('PAUSE_CAPTURE');await page.click('#two');assert.equal((await storage()).captures.length,1);console.log('PASS pause ignores clicks');
  await send('RESUME_CAPTURE');await page.bringToFront();assert.equal((await send('MANUAL_CAPTURE')).ok,true);
  await until(data=>['saved','failed'].includes(data.captures?.[1]?.imageStatus));assert.equal((await storage()).captures[1].imageStatus,'saved',(await storage()).captures[1].error);console.log('PASS manual screenshot');
