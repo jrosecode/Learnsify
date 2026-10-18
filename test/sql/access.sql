@@ -15,7 +15,7 @@ do $$declare d jsonb;begin select body||jsonb_build_object('id',id,'workspaceId'
 set role anon;
 select set_config('request.jwt.claim.sub','',false);
 select set_config('test.token',:'token',false);
-do $$begin begin perform public.shared_document(current_setting('test.token')::uuid,'wrong');raise exception 'PASSWORD_BYPASSED';exception when others then if sqlerrm='PASSWORD_BYPASSED' then raise;end if;end;if public.shared_document(current_setting('test.token')::uuid,'secret')->>'title'<>'Published' then raise exception 'share failed';end if;end$$;
+do $$begin begin perform public.shared_document(current_setting('test.token')::uuid,'wrong');raise exception 'PASSWORD_BYPASSED';exception when others then if sqlerrm='PASSWORD_BYPASSED' then raise;end if;end;begin perform public.shared_document(current_setting('test.token')::uuid,null);raise exception 'NULL_PASSWORD_BYPASSED';exception when others then if sqlerrm='NULL_PASSWORD_BYPASSED' then raise;end if;end;if public.shared_document(current_setting('test.token')::uuid,'secret')->>'title'<>'Published' then raise exception 'share failed';end if;end$$;
 set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
 select public.revoke_share('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');

@@ -46,7 +46,7 @@ create or replace function pathira_private.save_guide(document jsonb,expected_re
   if old.revision<>expected_revision then raise exception 'REVISION_CONFLICT: Another device changed this guide. Reload or save a copy.';end if;
   next_revision:=old.revision+1;
  else if expected_revision<>0 then raise exception 'Guide was deleted. Save a new copy.';end if;next_revision:=1;end if;
- if jsonb_typeof(document->'steps')<>'array' or jsonb_array_length(document->'steps')>1000 then raise exception 'Invalid steps';end if;
+ if jsonb_typeof(document->'steps') is distinct from 'array' or jsonb_array_length(document->'steps')>1000 then raise exception 'Invalid steps';end if;
  insert into public.guides(id,workspace_id,owner_id,revision,body) values(g,w,auth.uid(),next_revision,document-'steps'-'revision') on conflict(id) do update set body=excluded.body,revision=excluded.revision,updated_at=now();
  delete from public.guide_steps where guide_id=g;
  for st in select value from jsonb_array_elements(document->'steps') loop insert into public.guide_steps values(g,st->>'id',pos,st);pos:=pos+1;end loop;
@@ -62,7 +62,7 @@ create function public.publish_guide(g uuid,snapshot jsonb,passphrase text defau
 create function pathira_private.shared_document(t uuid,passphrase text default '') returns jsonb language plpgsql security definer set search_path='' as $$declare s public.guide_shares;email text;begin
  select * into s from public.guide_shares where token=t and enabled and (expires_at is null or expires_at>now());
  if not found then raise exception 'Guide unavailable or expired';end if;
- if s.password_hash is not null and extensions.crypt(passphrase,s.password_hash)<>s.password_hash then raise exception 'Password required or incorrect';end if;
+ if s.password_hash is not null and extensions.crypt(coalesce(passphrase,''),s.password_hash)<>s.password_hash then raise exception 'Password required or incorrect';end if;
  if s.allowed_domain is not null then
   if auth.uid() is null then raise exception 'Sign in with an approved email domain';end if;
   select u.email into email from auth.users u where u.id=auth.uid() and u.email_confirmed_at is not null;
