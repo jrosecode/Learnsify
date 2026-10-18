@@ -1,0 +1,28 @@
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select public.ensure_workspace() as workspace \gset
+select public.set_member(:'workspace','22222222-2222-4222-8222-222222222222','reviewer');
+select public.review_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',1,'pending','Review this');
+do $$begin begin perform public.review_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',1,'approved','');raise exception 'SELF_APPROVAL';exception when others then if sqlerrm='SELF_APPROVAL' then raise;end if;end;end$$;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
+select public.review_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',1,'approved','Looks good');
+do $$begin begin perform public.transfer_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',auth.uid());raise exception 'REVIEWER_TRANSFER';exception when others then if sqlerrm='REVIEWER_TRANSFER' then raise;end if;end;end$$;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select public.publish_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','{"revision":1,"title":"Tampered title","steps":[]}'::jsonb);
+do $$begin if (select snapshot->>'title' from public.guide_shares where guide_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')<>'Private guide' then raise exception 'Approved content replaced';end if;end$$;
+select public.save_guide(jsonb_build_object('id','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','workspaceId',:'workspace','title','Changed','steps','[]'::jsonb),1);
+do $$begin begin perform public.publish_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','{"revision":2,"steps":[]}'::jsonb);raise exception 'STALE_APPROVAL';exception when others then if sqlerrm='STALE_APPROVAL' then raise;end if;end;end$$;
+select public.set_member(:'workspace','22222222-2222-4222-8222-222222222222','editor');
+select public.transfer_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','22222222-2222-4222-8222-222222222222');
+do $$begin if (select owner_id from public.guides where id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')<>'22222222-2222-4222-8222-222222222222' then raise exception 'Transfer failed';end if;end$$;
+insert into storage.objects(bucket_id,name) values('guide-assets',:'workspace'||'/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/image');
+select public.begin_delete_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+do $$begin begin perform public.delete_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');raise exception 'DELETED_WITH_MEDIA';exception when others then if sqlerrm='DELETED_WITH_MEDIA' then raise;end if;end;end$$;
+do $$declare d jsonb;begin select body||jsonb_build_object('id',id,'workspaceId',workspace_id,'steps','[]'::jsonb) into d from public.guides where id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';begin perform public.save_guide(d,2);raise exception 'EDIT_DURING_DELETE';exception when others then if sqlerrm='EDIT_DURING_DELETE' then raise;end if;end;end$$;
+delete from storage.objects where name like :'workspace'||'/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/%';
+select public.delete_guide('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+do $$begin if (select count(*) from public.workspace_audit)<8 then raise exception 'Missing audit events';end if;begin delete from public.workspace_audit;raise exception 'AUDIT_MUTABLE';exception when others then if sqlerrm='AUDIT_MUTABLE' then raise;end if;end;end$$;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
+do $$begin if (select count(*) from public.workspace_audit)>0 then raise exception 'Audit tenant leak';end if;end$$;
+set role anon;
+do $$begin if has_function_privilege('anon','public.review_guide(uuid,integer,text,text)','execute') then raise exception 'Anonymous review grant';end if;end$$;
