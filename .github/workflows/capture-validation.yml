@@ -6,6 +6,10 @@ on:
       - 'src/**'
       - 'test/**'
       - 'scripts/**'
+      - 'server/**'
+      - 'netlify/**'
+      - 'integrations/**'
+      - 'package*.json'
       - '.github/workflows/capture-validation.yml'
   workflow_dispatch:
 jobs:
