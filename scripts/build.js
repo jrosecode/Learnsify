@@ -3,3 +3,4 @@ await rm('dist',{recursive:true,force:true}); await mkdir('dist',{recursive:true
 const {build}=await import('esbuild');
 await mkdir('dist/vendor',{recursive:true});
 await build({entryPoints:['node_modules/@supabase/supabase-js/dist/index.mjs'],bundle:true,format:'esm',platform:'browser',outfile:'dist/vendor/supabase.js',minify:true});
+await build({entryPoints:['node_modules/fflate/esm/browser.js'],bundle:true,format:'esm',platform:'browser',outfile:'dist/vendor/fflate.js',minify:true});
