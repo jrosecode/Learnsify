@@ -1,33 +1,31 @@
-# Releases 2–6: review branch
+# Pathira release status
 
-This branch is not a production release. `workspace.html` is an opt-in replacement workspace. The existing homepage and legacy data remain unchanged until migration approval and release validation.
+Billing is deferred by explicit user instruction. Do not add checkout, subscriptions, pricing, or payment dependencies in this release series.
 
-## Implemented for review
+## Merged functionality
 
-- Release 2: per-account encrypted IndexedDB; optional separate vault passphrase; explicit cloud sync; normalized guides/steps, private media, optimistic revision checks; domain capture restrictions and automatic sensitive-field/text masking.
-- Release 3: image crop, zoom, blur, permanent black redaction, arrows, boxes, text, click highlights; image and guide undo/redo; replace images, select/duplicate/merge/delete steps. Committing redaction clears local undo/original for that image. Previously synced versions must be deleted separately by deleting the cloud guide.
-- Release 4: sections/callouts/warnings, reusable local blocks, templates, folders/tags, variables, guide merge/split, branching, cloud version comparison/restore, recapture, ZIP/HTML/Markdown exports.
-- Release 5: explicit snapshot publication, account-free links, password/expiry/verified-domain restrictions, revocation, iframe snippet, authenticated comments/outdated reports, workspace roles and invitation links, branding.
-- Release 6 subset: opt-in viewer progress events, completion, assignments/due dates, overdue indication, screen capture, video/voice recording, reviewed manual translated copies, semantic labels/keyboard controls.
+- PRs 1–4: recoverable browser capture; encrypted local web vault; optional cloud sync; normalized private guide/media storage; image editing and redaction; guide templates/sections/tags/folders/variables/branching; versions and exports; protected sharing, roles, comments, assignments; default workspace rollout; private previews and conflict recovery.
+- PR 5: authenticated guide API, JavaScript client, and read-only local stdio MCP server. No hosted OAuth/remote MCP registration.
+- PR 6: consent-based AI translation drafts with provider validation and manual review, plus assignment calendar reminders.
+- PR 7: opt-in email scheduling/cancellation to the assignee's own verified email, and signed editor-authorized metadata delivery to an administrator-configured integration.
+- PR 8: encrypted extension staging and migration of existing plaintext captures, keyboard image selection, and automated serious/critical accessibility checks.
 
-## Not completed or activated
+## External configuration still required
 
-No paid plans, checkout, creator billing, refunds, scheduled email reminders, hosted AI/translation, webhook delivery, MCP server, public integration SDK, native desktop recorder, or complete accessibility audit. These are not claimed as released. Cloud end-to-end encryption and encrypted extension staging are not implemented. The web vault is encrypted, but the extension retains pending screenshots in Chrome local storage until acknowledged. Local offline editing requires an already loaded workspace; no offline app-shell cache is provided yet. Original-image ZIP export requires an explicit warning confirmation. Private preview now uses a short-lived in-memory browser channel; reload requires reopening the preview. Old plaintext preview entries are removed on workspace/viewer startup.
+AI translation: provider credentials or Netlify AI Gateway, explicit enable flag, available model ID. Email: Resend key and verified sender, explicit enable flag. Webhooks: public HTTPS destination, signing secret, workspace ID, explicit enable flag. No live AI requests, emails, or webhook deliveries were performed during implementation. Each provider remains disabled until configured. See translation-reminders.md, email-webhooks.md, and integrations.md.
 
-## Deployment gate
+## Practical limits and remaining expansion work
 
-Automatic approval review rejected the production migration because it adds persistent workspace roles, public RPCs, invitations, and storage permissions. Do not apply it by another route or merge/activate this workspace before explicit approval.
+- Browser/extension encryption stores a nonextractable key in the same browser profile. A separate optional web-vault passphrase is available. This is not cloud end-to-end encryption or protection against scripts running in an unlocked origin.
+- Masking is best effort. Review screenshots before syncing. Historical cloud versions can retain earlier images until the guide is deleted.
+- Browser screen/video/voice capture is available where supported. A standalone native desktop recorder and full offline app-shell cache are not implemented.
+- Calendar reminders rely on the user's calendar app. Email cancellation is explicit; completing/deleting an assignment via another client does not cancel an existing provider schedule.
+- Webhook delivery is explicit and has bounded retries, stable event IDs, and acknowledgement receipts. It is not automatic change-data capture or a durable background retry queue.
+- Accessibility automation checks selected flows; it is not a complete manual assistive-technology audit.
+- Publishing large inline-media snapshots may exceed request limits. Retention policies, quotas, broader load testing, and anonymous analytics abuse controls remain production-scaling work.
 
-Review `db/releases-2-6.sql`: ten new tables, RLS, checked private functions and invoker public RPCs, and one private 20 MB media bucket. It leaves `workflow_libraries` intact. Apply once transactionally after approval. Run the isolated SQL and browser checks, then test real Supabase storage and multi-account flows in staging. Production activation should replace the homepage only after these gates pass. Existing email/password authentication and account settings are unchanged.
+## Database and rollback
 
-## Privacy and operational limits
+The approved production migrations `workspace_guides_publishing_learning` and `restrict_workspace_rpc_anonymous_grants` are applied. All ten new tables have RLS, media is private, and privileged RPCs deny anonymous execution. The legacy workflow library is preserved; the older UI is available at legacy.html.
 
-Default browser encryption stores its key in the same profile; use the separate vault passphrase for locked-vault protection. It is not protection from malicious scripts running in an unlocked origin. Masking is best effort: review every image before upload. Publishing includes inline media in a snapshot; large guides can exceed request limits. Anonymous events are untrusted analytics, not proof of training, and require production abuse controls before broad rollout. Invite links are generated only; no email is sent. Domain restrictions require verified email even though the user requested no general signup verification. Deleting cloud media and database rows is not atomic; retry a failed deletion. Retention policies and quotas are still required before large-scale use.
-
-## Validation
-
-`npm test` includes capture recovery and import-injection/history tests. `npm run build` bundles pinned dependencies. GitHub Actions runs real Chromium capture and workspace smoke tests and an isolated Postgres 17 migration/access-control test. Mocked workspace browser tests validate local behaviors; they do not prove production Supabase integration.
-
-## Production migration status — October 18, 2026 UTC
-
-The user explicitly approved the migration. Applied `workspace_guides_publishing_learning` (20261018031344), followed by `restrict_workspace_rpc_anonymous_grants` to remove Supabase's direct default anon grants on privileged RPCs. Verified all ten tables have RLS enabled, guide-assets remains private with a 20 MB limit, anonymous save/invite execution is denied, anonymous protected-share lookup remains available, and the legacy library exists. Apply both SQL files in order in new environments. Frontend PR remains a draft; database approval does not establish production UI integration validation or completion of the remaining commercial features.
+Every PR is merged only after required CI checks pass. CI covers unit tests/build, Chromium capture/workspace/mobile flows, and isolated Postgres access-control tests. Live Supabase login, private upload/download, guide save, revision conflict and anonymous-write checks passed with temporary data removed afterward.
