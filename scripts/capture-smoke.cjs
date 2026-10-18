@@ -19,7 +19,7 @@ const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/ht
  data=await storage();assert.equal(data.captures[0].imageStatus,'saved',data.captures[0].error);console.log('PASS real screenshot captured');
  await send('PAUSE_CAPTURE');await page.click('#two');assert.equal((await storage()).captures.length,1);console.log('PASS pause ignores clicks');
  await send('RESUME_CAPTURE');await page.bringToFront();assert.equal((await send('MANUAL_CAPTURE')).ok,true);
- await until(data=>['saved','failed'].includes(data.captures?.[1]?.imageStatus));assert.equal((await storage()).captures[1].imageStatus,'saved');console.log('PASS manual screenshot');
+ await until(data=>['saved','failed'].includes(data.captures?.[1]?.imageStatus));assert.equal((await storage()).captures[1].imageStatus,'saved',(await storage()).captures[1].error);console.log('PASS manual screenshot');
  await panel.screenshot({path:'/tmp/pathira-panel.png',fullPage:true});
  console.log('PANEL_PREVIEW_BASE64='+fs.readFileSync('/tmp/pathira-panel.png').toString('base64'));
  await context.close();context=await launch();worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker');
