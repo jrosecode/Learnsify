@@ -9,8 +9,10 @@
     "package:store": "node scripts/package-store.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.26.0",
     "@supabase/supabase-js": "2.118.0",
     "esbuild": "0.25.12",
-    "fflate": "0.8.2"
+    "fflate": "0.8.2",
+    "zod": "3.25.76"
   }
 }
