@@ -18,7 +18,7 @@ create table public.guide_reviews(
 );
 create table public.workspace_audit(
  id uuid primary key default gen_random_uuid(),workspace_id uuid not null references public.workspaces on delete cascade,
- guide_id uuid,actor_id uuid,action text not null,revision integer,created_at timestamptz not null default now()
+ guide_id uuid,actor_id uuid,action text not null,revision integer,details jsonb not null default '{}',created_at timestamptz not null default now()
 );
 create index workspace_audit_scope on public.workspace_audit(workspace_id,created_at desc);
 create index workspace_audit_guide on public.workspace_audit(guide_id,created_at desc);
@@ -35,7 +35,7 @@ create function pathira_private.audit_change() returns trigger language plpgsql 
  elsif TG_TABLE_NAME in ('workspace_members','workspace_invites') then w:=(rowdata->>'workspace_id')::uuid;
  elsif TG_TABLE_NAME='workspaces' then w:=(rowdata->>'id')::uuid;
  else g:=(rowdata->>'guide_id')::uuid;select workspace_id,revision into w,r from public.guides where id=g;end if;
- if w is not null then insert into public.workspace_audit(workspace_id,guide_id,actor_id,action,revision) values(w,g,auth.uid(),TG_TABLE_NAME||'.'||lower(TG_OP),r);end if;
+ if w is not null then insert into public.workspace_audit(workspace_id,guide_id,actor_id,action,revision,details) values(w,g,auth.uid(),TG_TABLE_NAME||'.'||lower(TG_OP),r,jsonb_strip_nulls(jsonb_build_object('member',rowdata->>'user_id','role',rowdata->>'role','owner',rowdata->>'owner_id','reviewStatus',rowdata->>'status','deletionPending',rowdata->>'deleting_at','shareEnabled',rowdata->>'enabled')));end if;
  return coalesce(new,old);end$$;
 DO $$declare t text;begin foreach t in array array['guides','guide_reviews','guide_shares','workspace_members','workspace_invites','guide_comments','guide_assignments'] loop execute format('create trigger audit_change after insert or update or delete on public.%I for each row execute function pathira_private.audit_change()',t);end loop;end$$;
 create function pathira_private.review_guide(g uuid,expected_revision integer,decision text,note text default '') returns void language plpgsql security definer set search_path='' as $$

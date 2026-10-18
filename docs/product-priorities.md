@@ -22,4 +22,4 @@ Continue hardening sync visibility and retry behavior, large-media sharing limit
 
 ## Later collaboration scope
 
-Memberships, editor/viewer access and comments exist. Dedicated reviewer roles, formal approval workflow and ownership-transfer UI still require implementation. Existing version/event records are not a comprehensive audit history.
+Memberships, editor/viewer access and comments exist. Reviewer roles, independent revision-specific approval, guide ownership transfer and append-only workspace audit history are implemented in PR #10. History begins when the migration is applied; it does not reconstruct older events.
