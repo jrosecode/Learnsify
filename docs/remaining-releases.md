@@ -12,7 +12,7 @@ This branch is not a production release. `workspace.html` is an opt-in replaceme
 
 ## Not completed or activated
 
-No paid plans, checkout, creator billing, refunds, scheduled email reminders, hosted AI/translation, webhook delivery, MCP server, public integration SDK, native desktop recorder, or complete accessibility audit. These are not claimed as released. Cloud end-to-end encryption and encrypted extension staging are not implemented. The web vault is encrypted, but the extension retains pending screenshots in Chrome local storage until acknowledged. Local offline editing requires an already loaded workspace; no offline app-shell cache is provided yet. Original-image ZIP export requires an explicit warning confirmation. Preview uses a temporary same-tab sessionStorage copy. Clear the browser session to remove that copy.
+No paid plans, checkout, creator billing, refunds, scheduled email reminders, hosted AI/translation, webhook delivery, MCP server, public integration SDK, native desktop recorder, or complete accessibility audit. These are not claimed as released. Cloud end-to-end encryption and encrypted extension staging are not implemented. The web vault is encrypted, but the extension retains pending screenshots in Chrome local storage until acknowledged. Local offline editing requires an already loaded workspace; no offline app-shell cache is provided yet. Original-image ZIP export requires an explicit warning confirmation. Private preview now uses a short-lived in-memory browser channel; reload requires reopening the preview. Old plaintext preview entries are removed on workspace/viewer startup.
 
 ## Deployment gate
 
